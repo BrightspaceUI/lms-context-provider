@@ -1,0 +1,9 @@
+{
+  "extends": "brightspace/browser-config",
+  "overrides": [
+    {
+      "files": "**/test/*",
+      "extends": "brightspace/testing-config"
+    }
+  ]
+}

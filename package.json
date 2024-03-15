@@ -1,0 +1,26 @@
+{
+  "name": "@d2l/lms-context-provider",
+  "description": "Provides LMS context and environment settings to UI components, applications and libraries",
+  "type": "module",
+  "version": "0.1.0",
+  "repository": "https://github.com/BrightspaceUI/lms-context-provider.git",
+  "scripts": {
+    "lint": "npm run lint:eslint",
+    "lint:eslint": "eslint . --ext .js,.html",
+    "test": "npm run test:unit",
+    "test:unit": "d2l-test-runner --files ./src/**/test/*.test.js"
+  },
+  "author": "D2L Corporation",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@brightspace-ui/testing": "^1",
+    "eslint": "^8",
+    "eslint-config-brightspace": "^1",
+    "sinon": "^17"
+  },
+  "files": [
+    "/src",
+    "!demo",
+    "!test"
+  ]
+}
