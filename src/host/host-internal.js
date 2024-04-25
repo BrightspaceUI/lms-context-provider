@@ -1,3 +1,5 @@
+import { LmsContextProviderError } from '../error.js';
+
 let initialized = false;
 
 const allowedFrames = new Map();
@@ -18,10 +20,14 @@ function handleContextRequest(type, options, subscribe) {
 function handleContextRequestEvent(e) {
 	if (!e.detail || !e.detail.type) return;
 	e.detail.value = handleContextRequest(e.detail.type, e.detail.options, e.detail.subscribe);
+	e.detail.handled = true;
 }
 
 function handleContextRequestMessage(e) {
-	if (!e.data.isContextProvider || !e.data.type || !/^(?:http|https):\/\//.test(e.origin)) return;
+	if (!e.data.isContextProvider) return;
+	if (!e.data.type || !/^(?:http|https):\/\//.test(e.origin)) {
+		throw new LmsContextProviderError(`Invalid message sent by framed client at origin ${e.origin}`);
+	}
 
 	let targetFrame;
 	for (const frame of allowedFrames.keys()) {
@@ -71,11 +77,11 @@ export function initialize() {
 
 export function allowFrame(frame, origin) {
 	if (!initialized) {
-		throw new Error(`lms-context-provider: Can't register frame with id ${frame.id}. Context provider host has not been initialized.`);
+		throw new LmsContextProviderError(`Can't register frame with id ${frame.id}. Context provider host has not been initialized.`);
 	}
 
 	if (allowedFrames.has(frame)) {
-		throw new Error(`lms-context-provider: A frame with id ${frame.id} has already been registered with this host.`);
+		throw new LmsContextProviderError(`A frame with id ${frame.id} has already been registered with this host.`);
 	}
 
 	allowedFrames.set(frame, origin);
@@ -83,11 +89,11 @@ export function allowFrame(frame, origin) {
 
 export function registerPlugin(type, tryGetCallback, subscriptionCallback) {
 	if (!initialized) {
-		throw new Error(`lms-context-provider: Can't register plugin with type ${type}. Context provider host has not been initialized.`);
+		throw new LmsContextProviderError(`Can't register plugin with type ${type}. Context provider host has not been initialized.`);
 	}
 
 	if (registeredPlugins.has(type)) {
-		throw new Error(`lms-context-provider: A plugin with type ${type} has already been registered with this host.`);
+		throw new LmsContextProviderError(`A plugin with type ${type} has already been registered with this host.`);
 	}
 
 	registeredPlugins.set(type, {
@@ -101,7 +107,6 @@ export function registerPlugin(type, tryGetCallback, subscriptionCallback) {
 	}
 }
 
-// DO NOT IMPORT! Used for testing only!
 export function reset() {
 	if (!initialized) return;
 

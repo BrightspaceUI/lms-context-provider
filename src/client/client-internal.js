@@ -1,3 +1,5 @@
+import { LmsContextProviderError } from '../error.js';
+
 const messageTimeoutMs = 75;
 let oneTimeMessageListenerInitialized = false;
 let subscriptionListenerInitialized = false;
@@ -48,12 +50,17 @@ function handleSubscribedChangeResponse(responseData) {
 }
 
 async function sendEvent(type, options, subscribe) {
-	if (await isFramed()) {
-		if (subscribe && !subscriptionListenerInitialized) {
-			window.addEventListener('message', handleSubscribedChangeResponseMessage);
-			subscriptionListenerInitialized = true;
-		}
+	const isframedVal = await isFramed();
 
+	if (subscribe && !subscriptionListenerInitialized) {
+		isframedVal
+			? window.addEventListener('message', handleSubscribedChangeResponseMessage)
+			: document.addEventListener('lms-context-change', handleSubscribedChangeResponseEvent);
+
+		subscriptionListenerInitialized = true;
+	}
+
+	if (isframedVal) {
 		const message = {
 			isContextProvider: true,
 			type,
@@ -63,14 +70,14 @@ async function sendEvent(type, options, subscribe) {
 
 		return await Promise.race([
 			sendMessage(message),
-			new Promise(resolve => setTimeout(() => resolve(undefined), messageTimeoutMs))
+			new Promise((_, reject) =>
+				setTimeout(
+					() => reject(new LmsContextProviderError('No response from host')),
+					messageTimeoutMs
+				)
+			)
 		]);
 	} else {
-		if (subscribe && !subscriptionListenerInitialized) {
-			document.addEventListener('lms-context-change', handleSubscribedChangeResponseEvent);
-			subscriptionListenerInitialized = true;
-		}
-
 		const event = new CustomEvent(
 			'lms-context-request', {
 				detail: { type, options, subscribe }
@@ -78,11 +85,12 @@ async function sendEvent(type, options, subscribe) {
 		);
 
 		document.dispatchEvent(event);
-		return event.detail.value;
+		return event.detail.handled
+			? event.detail.value
+			: Promise.reject(new LmsContextProviderError('No response from host'));
 	}
 }
 
-// DO NOT IMPORT! Usage should be internal only; this is exported only for testing purposes.
 export async function isFramed() {
 	if (framed !== undefined) return framed;
 
@@ -124,7 +132,6 @@ export async function tryPerform(actionType, options) {
 	await sendEvent(actionType, options, false);
 }
 
-// DO NOT IMPORT! Used for testing only!
 export function reset() {
 	window.removeEventListener('message', handleOneTimeMessageResponse);
 	window.removeEventListener('message', handleSubscribedChangeResponseMessage);

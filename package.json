@@ -26,8 +26,6 @@
     "./client.js": "./src/client/client.js"
   },
   "files": [
-    "/src",
-    "!demo",
-    "!test"
+    "/src"
   ]
 }

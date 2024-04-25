@@ -1,6 +1,7 @@
 import { aTimeout, expect, fixture, html } from '@brightspace-ui/testing';
 import { isFramed, reset, tryGet, tryPerform } from '../src/client/client-internal.js';
-import sinon from 'sinon';
+import { restore, spy, stub, useFakeTimers } from 'sinon';
+import { LmsContextProviderError } from '../src/error.js';
 
 const mockContextType = 'test-context';
 const mockOpts = { test: 'test' };
@@ -14,26 +15,33 @@ function assertFramedOneTimeRequestMessage(messageData, type, opts, subscribe) {
 
 describe('lms-context-provider client', () => {
 
-	const sandbox = sinon.createSandbox();
+	let clock;
+	beforeEach(() => {
+		clock = useFakeTimers({
+			now: Date.now(),
+			shouldAdvanceTime: true
+		});
+	});
 
 	afterEach(() => {
 		reset();
-		sandbox.restore();
+		clock.restore();
+		restore();
 	});
 
-	const setUpIsFramedMessageListener = (frame, spy, respond) => {
-		const handleIsFramedMessage = e => {
-			frame.contentWindow.removeEventListener('message', handleIsFramedMessage);
-			if (spy) spy(e.data);
-			if (!respond) return;
-
-			window.postMessage({ isContextProvider: true, type: 'framed-request', value: true }, '*');
-		};
-
-		frame.contentWindow.addEventListener('message', handleIsFramedMessage);
-	};
-
 	describe('is framed', () => {
+
+		const setUpIsFramedMessageListener = (frame, spy, respond) => {
+			const handleIsFramedMessage = e => {
+				frame.contentWindow.removeEventListener('message', handleIsFramedMessage);
+				if (spy) spy(e.data);
+				if (!respond) return;
+
+				window.postMessage({ isContextProvider: true, type: 'framed-request', value: true }, '*');
+			};
+
+			frame.contentWindow.addEventListener('message', handleIsFramedMessage);
+		};
 
 		let mockFrame;
 		beforeEach(async() => {
@@ -41,8 +49,8 @@ describe('lms-context-provider client', () => {
 		});
 
 		it('is not framed if the window is its own parent', async() => {
-			sandbox.stub(window, 'parent').value(window);
-			const listenerSpy = sandbox.spy();
+			stub(window, 'parent').value(window);
+			const listenerSpy = spy();
 			setUpIsFramedMessageListener(mockFrame, listenerSpy, true);
 
 			const framed = await isFramed();
@@ -51,8 +59,8 @@ describe('lms-context-provider client', () => {
 		});
 
 		it('is not framed if accessing the window parent throws', async() => {
-			sandbox.stub(window, 'parent').throws();
-			const listenerSpy = sandbox.spy();
+			stub(window, 'parent').throws();
+			const listenerSpy = spy();
 			setUpIsFramedMessageListener(mockFrame, listenerSpy, true);
 
 			const framed = await isFramed();
@@ -61,18 +69,20 @@ describe('lms-context-provider client', () => {
 		});
 
 		it('is not framed if the host does not respond to an is-framed request', async() => {
-			sandbox.stub(window, 'parent').value(mockFrame.contentWindow);
-			const listenerSpy = sandbox.spy();
+			stub(window, 'parent').value(mockFrame.contentWindow);
+			const listenerSpy = spy();
 			setUpIsFramedMessageListener(mockFrame, listenerSpy, false);
 
-			const framed = await isFramed();
-			expect(framed).to.be.false;
+			const framed = isFramed();
+			await clock.tickAsync(75);
+
+			expect(await framed).to.be.false;
 			expect(listenerSpy).to.have.been.calledOnce;
 		});
 
 		it('is framed if the host responds to an is-framed request', async() => {
-			sandbox.stub(window, 'parent').value(mockFrame.contentWindow);
-			const listenerSpy = sandbox.spy();
+			stub(window, 'parent').value(mockFrame.contentWindow);
+			const listenerSpy = spy();
 			setUpIsFramedMessageListener(mockFrame, listenerSpy, true);
 
 			const framed = await isFramed();
@@ -97,7 +107,7 @@ describe('lms-context-provider client', () => {
 			window.postMessage({ isContextProvider: isContextProvider, type: type, changedValues: changedValues }, '*');
 		};
 
-		const setUpMockHostMessageListener = (frame, spy, returnVal, isContextProvider, omitType) => {
+		const setUpMockHostMessageListener = (frame, spy, respond, returnVal, isContextProvider, omitType) => {
 			isContextProvider = isContextProvider ?? true;
 
 			const handleMessage = e => {
@@ -109,7 +119,7 @@ describe('lms-context-provider client', () => {
 
 				frame.contentWindow.removeEventListener('message', handleMessage);
 				if (spy) spy(e.data);
-				if (!returnVal) return;
+				if (!respond) return;
 
 				sendResponseMessage(isContextProvider, returnVal, omitType ? undefined : mockContextType);
 			};
@@ -120,15 +130,15 @@ describe('lms-context-provider client', () => {
 		let mockFrame;
 		beforeEach(async() => {
 			mockFrame = await fixture(html`<iframe></iframe>`);
-			sandbox.stub(window, 'parent').value(mockFrame.contentWindow);
+			stub(window, 'parent').value(mockFrame.contentWindow);
 		});
 
 		describe('tryGet', () => {
 
 			it('returns requested data when provided by the host', async() => {
 				const testVal = 'testVal';
-				const requestSpy = sandbox.spy();
-				setUpMockHostMessageListener(mockFrame, requestSpy, testVal);
+				const requestSpy = spy();
+				setUpMockHostMessageListener(mockFrame, requestSpy, true, testVal);
 
 				const val = await tryGet(mockContextType, mockOpts);
 				expect(val).to.equal(testVal);
@@ -144,11 +154,11 @@ describe('lms-context-provider client', () => {
 				const firstTestVal = 'testVal';
 				const secondTestVal = 'otherTestVal';
 
-				setUpMockHostMessageListener(mockFrame, undefined, firstTestVal);
+				setUpMockHostMessageListener(mockFrame, undefined, true, firstTestVal);
 				await tryGet(mockContextType, mockOpts);
 
-				const requestSpy = sandbox.spy();
-				setUpMockHostMessageListener(mockFrame, requestSpy, secondTestVal);
+				const requestSpy = spy();
+				setUpMockHostMessageListener(mockFrame, requestSpy, true, secondTestVal);
 
 				const secondVal = await tryGet(mockContextType, mockOpts);
 				expect(secondVal).to.equal(secondTestVal);
@@ -160,53 +170,65 @@ describe('lms-context-provider client', () => {
 				assertFramedOneTimeRequestMessage(messageData, mockContextType, mockOpts, false);
 			});
 
-			it('returns undefined when the host does not respond', async() => {
-				const requestSpy = sandbox.spy();
-				setUpMockHostMessageListener(mockFrame, requestSpy);
+			it('rejects when the host does not respond', async() => {
+				const requestSpy = spy();
+				setUpMockHostMessageListener(mockFrame, requestSpy, false);
 
-				const val = await tryGet(mockContextType, mockOpts);
-				expect(val).to.be.undefined;
+				const val = tryGet(mockContextType, mockOpts);
+				return val.then(val => {
+					expect.fail(`Should reject, but ${val} was returned`);
+				}, err => {
+					expect(err).to.be.an.instanceof(LmsContextProviderError);
 
-				expect(requestSpy).to.have.been.calledOnce;
-				expect(requestSpy.args[0]).to.have.length(1);
+					expect(requestSpy).to.have.been.calledOnce;
+					expect(requestSpy.args[0]).to.have.length(1);
 
-				const messageData = requestSpy.args[0][0];
-				assertFramedOneTimeRequestMessage(messageData, mockContextType, mockOpts, false);
+					const messageData = requestSpy.args[0][0];
+					assertFramedOneTimeRequestMessage(messageData, mockContextType, mockOpts, false);
+				});
 			});
 
-			it('ignores host response if isContextProvider is not provided in message', async() => {
+			it('rejects if isContextProvider is not provided in message', async() => {
 				const testVal = 'testVal';
-				const requestSpy = sandbox.spy();
-				setUpMockHostMessageListener(mockFrame, requestSpy, testVal, false);
+				const requestSpy = spy();
+				setUpMockHostMessageListener(mockFrame, requestSpy, true, testVal, false);
 
-				const val = await tryGet(mockContextType, mockOpts);
-				expect(val).to.be.undefined;
+				const val = tryGet(mockContextType, mockOpts);
+				return val.then(val => {
+					expect.fail(`Should reject, but ${val} was returned`);
+				}, err => {
+					expect(err).to.be.an.instanceof(LmsContextProviderError);
 
-				expect(requestSpy).to.have.been.calledOnce;
-				expect(requestSpy.args[0]).to.have.length(1);
+					expect(requestSpy).to.have.been.calledOnce;
+					expect(requestSpy.args[0]).to.have.length(1);
 
-				const messageData = requestSpy.args[0][0];
-				assertFramedOneTimeRequestMessage(messageData, mockContextType, mockOpts, false);
+					const messageData = requestSpy.args[0][0];
+					assertFramedOneTimeRequestMessage(messageData, mockContextType, mockOpts, false);
+				});
 			});
 
-			it('ignores host response if type is not provided in message', async() => {
+			it('rejects if type is not provided in message', async() => {
 				const testVal = 'testVal';
-				const requestSpy = sandbox.spy();
-				setUpMockHostMessageListener(mockFrame, requestSpy, testVal, true, true);
+				const requestSpy = spy();
+				setUpMockHostMessageListener(mockFrame, requestSpy, true, testVal, true, true);
 
-				const val = await tryGet(mockContextType, mockOpts);
-				expect(val).to.be.undefined;
+				const val = tryGet(mockContextType, mockOpts);
+				return val.then(val => {
+					expect.fail(`Should reject, but ${val} was returned`);
+				}, err => {
+					expect(err).to.be.an.instanceof(LmsContextProviderError);
 
-				expect(requestSpy).to.have.been.calledOnce;
-				expect(requestSpy.args[0]).to.have.length(1);
+					expect(requestSpy).to.have.been.calledOnce;
+					expect(requestSpy.args[0]).to.have.length(1);
 
-				const messageData = requestSpy.args[0][0];
-				assertFramedOneTimeRequestMessage(messageData, mockContextType, mockOpts, false);
+					const messageData = requestSpy.args[0][0];
+					assertFramedOneTimeRequestMessage(messageData, mockContextType, mockOpts, false);
+				});
 			});
 
 			it('does not send subscribe event if onChange callback is not a function', async() => {
-				const requestSpy = sandbox.spy();
-				setUpMockHostMessageListener(mockFrame, requestSpy, undefined);
+				const requestSpy = spy();
+				setUpMockHostMessageListener(mockFrame, requestSpy, true);
 
 				await tryGet(mockContextType, mockOpts, 'notAFunction');
 
@@ -222,10 +244,10 @@ describe('lms-context-provider client', () => {
 					testVal: 'testVal'
 				};
 
-				const requestSpy = sandbox.spy();
-				setUpMockHostMessageListener(mockFrame, requestSpy, undefined);
+				const requestSpy = spy();
+				setUpMockHostMessageListener(mockFrame, requestSpy, true);
 
-				const subscriptionSpy = sandbox.spy();
+				const subscriptionSpy = spy();
 				// Request a value with an onChange callback to set up subscription
 				await tryGet(mockContextType, mockOpts, subscriptionSpy);
 
@@ -252,9 +274,9 @@ describe('lms-context-provider client', () => {
 					testVal: 'testVal'
 				};
 
-				setUpIsFramedMessageListener(mockFrame, undefined, true);
+				setUpMockHostMessageListener(mockFrame, undefined, true);
 
-				const subscriptionSpy = sandbox.spy();
+				const subscriptionSpy = spy();
 				// Request a value with an onChange callback to set up subscription
 				await tryGet(mockContextType, mockOpts, subscriptionSpy);
 
@@ -269,9 +291,9 @@ describe('lms-context-provider client', () => {
 					testVal: 'testVal'
 				};
 
-				setUpIsFramedMessageListener(mockFrame, undefined, true);
+				setUpMockHostMessageListener(mockFrame, undefined, true);
 
-				const subscriptionSpy = sandbox.spy();
+				const subscriptionSpy = spy();
 				// Request a value with an onChange callback to set up subscription
 				await tryGet(mockContextType, mockOpts, subscriptionSpy);
 
@@ -282,9 +304,9 @@ describe('lms-context-provider client', () => {
 			});
 
 			it('does not execute onChange callback when changed values are missing from subscription change message', async() => {
-				setUpIsFramedMessageListener(mockFrame, undefined, true);
+				setUpMockHostMessageListener(mockFrame, undefined, true);
 
-				const subscriptionSpy = sandbox.spy();
+				const subscriptionSpy = spy();
 				// Request a value with an onChange callback to set up subscription
 				await tryGet(mockContextType, mockOpts, subscriptionSpy);
 
@@ -300,8 +322,8 @@ describe('lms-context-provider client', () => {
 
 			it('does not provide a return value if the host response includes one', async() => {
 				const testVal = 'testVal';
-				const requestSpy = sandbox.spy();
-				setUpMockHostMessageListener(mockFrame, requestSpy, testVal);
+				const requestSpy = spy();
+				setUpMockHostMessageListener(mockFrame, requestSpy, true, testVal);
 
 				const val = await tryPerform(mockContextType, mockOpts);
 				expect(val).to.equal(undefined);
@@ -311,6 +333,57 @@ describe('lms-context-provider client', () => {
 
 				const messageData = requestSpy.args[0][0];
 				assertFramedOneTimeRequestMessage(messageData, mockContextType, mockOpts, false);
+			});
+
+			it('rejects if the host does not respond', async() => {
+				const requestSpy = spy();
+				setUpMockHostMessageListener(mockFrame, requestSpy, false);
+
+				return tryPerform(mockContextType, mockOpts).then(() => {
+					expect.fail('Should reject, but did not');
+				}, err => {
+					expect(err).to.be.an.instanceof(LmsContextProviderError);
+
+					expect(requestSpy).to.have.been.calledOnce;
+					expect(requestSpy.args[0]).to.have.length(1);
+
+					const messageData = requestSpy.args[0][0];
+					assertFramedOneTimeRequestMessage(messageData, mockContextType, mockOpts, false);
+				});
+			});
+
+			it('rejects if isContextProvider is not provided in message', async() => {
+				const requestSpy = spy();
+				setUpMockHostMessageListener(mockFrame, requestSpy, true, undefined, false);
+
+				return tryPerform(mockContextType, mockOpts).then(() => {
+					expect.fail('Should reject, but did not');
+				}, err => {
+					expect(err).to.be.an.instanceof(LmsContextProviderError);
+
+					expect(requestSpy).to.have.been.calledOnce;
+					expect(requestSpy.args[0]).to.have.length(1);
+
+					const messageData = requestSpy.args[0][0];
+					assertFramedOneTimeRequestMessage(messageData, mockContextType, mockOpts, false);
+				});
+			});
+
+			it('rejects if type is not provided in message', async() => {
+				const requestSpy = spy();
+				setUpMockHostMessageListener(mockFrame, requestSpy, true, undefined, true, true);
+
+				return tryPerform(mockContextType, mockOpts).then(() => {
+					expect.fail('Should reject, but did not');
+				}, err => {
+					expect(err).to.be.an.instanceof(LmsContextProviderError);
+
+					expect(requestSpy).to.have.been.calledOnce;
+					expect(requestSpy.args[0]).to.have.length(1);
+
+					const messageData = requestSpy.args[0][0];
+					assertFramedOneTimeRequestMessage(messageData, mockContextType, mockOpts, false);
+				});
 			});
 
 		});
@@ -330,10 +403,11 @@ describe('lms-context-provider client', () => {
 			));
 		};
 
-		const setUpMockHostEventListener = (spy, returnVal) => {
+		const setUpMockHostEventListener = (spy, handled, returnVal) => {
 			const handleContextRequest = e => {
 				document.removeEventListener('lms-context-request', handleContextRequest);
 				if (spy) spy(e.detail);
+				e.detail.handled = handled;
 				e.detail.value = returnVal;
 			};
 
@@ -350,8 +424,8 @@ describe('lms-context-provider client', () => {
 
 			it('returns requested data when provided by the host', async() => {
 				const testVal = 'testVal';
-				const requestSpy = sandbox.spy();
-				setUpMockHostEventListener(requestSpy, testVal);
+				const requestSpy = spy();
+				setUpMockHostEventListener(requestSpy, true, testVal);
 
 				const val = await tryGet(mockContextType, mockOpts);
 				expect(val).to.equal(testVal);
@@ -367,11 +441,11 @@ describe('lms-context-provider client', () => {
 				const firstTestVal = 'testVal';
 				const secondTestVal = 'otherTestVal';
 
-				setUpMockHostEventListener(undefined, firstTestVal);
+				setUpMockHostEventListener(undefined, true, firstTestVal);
 				await tryGet(mockContextType, mockOpts);
 
-				const requestSpy = sandbox.spy();
-				setUpMockHostEventListener(requestSpy, secondTestVal);
+				const requestSpy = spy();
+				setUpMockHostEventListener(requestSpy, true, secondTestVal);
 
 				const secondVal = await tryGet(mockContextType, mockOpts);
 				expect(secondVal).to.equal(secondTestVal);
@@ -384,8 +458,8 @@ describe('lms-context-provider client', () => {
 			});
 
 			it('does not send subscribe event if onChange callback is not a function', async() => {
-				const requestSpy = sandbox.spy();
-				setUpMockHostEventListener(requestSpy, undefined);
+				const requestSpy = spy();
+				setUpMockHostEventListener(requestSpy, true, undefined);
 
 				await tryGet(mockContextType, mockOpts, 'notAFunction');
 
@@ -401,10 +475,10 @@ describe('lms-context-provider client', () => {
 					testVal: 'testVal'
 				};
 
-				const requestSpy = sandbox.spy();
-				setUpMockHostEventListener(requestSpy, undefined);
+				const requestSpy = spy();
+				setUpMockHostEventListener(requestSpy, true, undefined);
 
-				const subscriptionSpy = sandbox.spy();
+				const subscriptionSpy = spy();
 				// Request a value with an onChange callback to set up subscription
 				await tryGet(mockContextType, mockOpts, subscriptionSpy);
 
@@ -430,7 +504,9 @@ describe('lms-context-provider client', () => {
 					testVal: 'testVal'
 				};
 
-				const subscriptionSpy = sandbox.spy();
+				setUpMockHostEventListener(undefined, true, 'junk');
+
+				const subscriptionSpy = spy();
 				// Request a value with an onChange callback to set up subscription
 				await tryGet(mockContextType, mockOpts, subscriptionSpy);
 
@@ -445,8 +521,8 @@ describe('lms-context-provider client', () => {
 
 			it('does not provide a return value if the host response includes one', async() => {
 				const testVal = 'testVal';
-				const requestSpy = sandbox.spy();
-				setUpMockHostEventListener(requestSpy, testVal);
+				const requestSpy = spy();
+				setUpMockHostEventListener(requestSpy, true, testVal);
 
 				const val = await tryPerform(mockContextType, mockOpts);
 				expect(val).to.equal(undefined);
@@ -456,6 +532,23 @@ describe('lms-context-provider client', () => {
 
 				const eventDetails = requestSpy.args[0][0];
 				assertOneTimeRequestEvent(eventDetails, mockContextType, mockOpts, false);
+			});
+
+			it('rejects if the host does not respond', async() => {
+				const requestSpy = spy();
+				setUpMockHostEventListener(requestSpy, false);
+
+				return tryPerform(mockContextType, mockOpts).then(() => {
+					expect.fail('Should reject, but did not');
+				}, err => {
+					expect(err).to.be.an.instanceof(LmsContextProviderError);
+
+					expect(requestSpy).to.have.been.calledOnce;
+					expect(requestSpy.args[0]).to.have.length(1);
+
+					const eventDetails = requestSpy.args[0][0];
+					assertOneTimeRequestEvent(eventDetails, mockContextType, mockOpts, false);
+				});
 			});
 
 		});
