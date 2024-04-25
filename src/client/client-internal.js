@@ -56,9 +56,9 @@ async function sendEvent(type, options, subscribe) {
 
 		const message = {
 			isContextProvider: true,
-			type: type,
-			options: options,
-			subscribe: subscribe
+			type,
+			options,
+			subscribe
 		};
 
 		return await Promise.race([
@@ -73,11 +73,7 @@ async function sendEvent(type, options, subscribe) {
 
 		const event = new CustomEvent(
 			'lms-context-request', {
-				detail: {
-					type: type,
-					options: options,
-					subscribe: subscribe
-				}
+				detail: { type, options, subscribe }
 			}
 		);
 
@@ -109,7 +105,7 @@ export async function isFramed() {
 }
 
 export async function tryGet(contextType, options, onChangeCallback) {
-	const subscribe = (onChangeCallback && typeof(onChangeCallback) === 'function') || false;
+	const subscribe = (typeof(onChangeCallback) === 'function') || false;
 
 	// Send one-time request first to make sure it's responded to before any change listeners are registered.
 	const value = await sendEvent(contextType, options, subscribe);
