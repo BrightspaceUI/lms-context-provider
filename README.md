@@ -26,7 +26,7 @@ initialize();
 
 #### Registering Plugins
 
-To register a host plugin, import and execute the `registerPlugin` function on a page where a host has already been initialized. The provided context type should be unique per page. If your plugin needs to return data to a client, it should provide a `tryGetCallback` as the second argument. If it allows subscriptions to change events, then it should provide a `subscribeCallback` as the third argument.
+To register a host plugin, import and execute the `registerPlugin` function on a page where a host has already been initialized. The provided context type should be unique per page. If your plugin needs to return data to a client, it should provide a `tryGetCallback` as the second argument. If clients can be notified when the data changes, then it should provide a `subscribeCallback` as the third argument.
 
 ```js
 import { registerPlugin } from '@d2l/lms-context/provider/host.js';
@@ -56,7 +56,7 @@ registerPlugin('my-context-type', tryGetCallback, subscribeCallback);
 
 #### Framed Clients
 
-When working with a client inside an iframe, the host page needs to explicitly allow that iframe. To do this, import and execute `allowFrame` from the host page. The host must already be initialized. The first argument must be the iframe element itself. The second argument should be the expected origin. Requests from clients within iframes that have not explicitly bene allowed or that come from a different origin will be ignored.
+When working with a client inside an iframe, the host page needs to explicitly allow that iframe. To do this, import and execute `allowFrame` from the host page. The host must already be initialized. The first argument must be the iframe element itself. The second argument should be the expected origin. Requests from clients within iframes that have not explicitly been allowed or that come from a different origin will be ignored.
 
 ```js
 import { allowFrame } from '@d2l/lms-context-provider/host.js';
@@ -76,14 +76,17 @@ When your library or component is expecting data to be returned, import `tryGet`
 ```js
 import { tryGet } from '@d2l/lms-context-provider/client.js';
 
-// This callback should accept a single argument, an object containing any relevant information from the host plugin.
-function onChangeCallback(changedValues) {
+const val = await tryGet(
+  'my-context-type',
+  { someProp: someVal },
+  (changedValues) => {
+    // This callback should accept a single argument:
+    // an object containing any relevant information from the host plugin
 	if (changedValues.someChangedProp === 'someVal') {
 		doSomeWork(changedValues.someChangedProp);
 	}
-}
-
-const val = await tryGet('my-context-type', { someProp: someVal }, onChangeCallback);
+  }
+);
 doSomeWork(val);
 ```
 
