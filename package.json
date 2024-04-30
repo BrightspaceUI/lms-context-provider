@@ -4,11 +4,14 @@
   "type": "module",
   "version": "1.1.0",
   "repository": "https://github.com/BrightspaceUI/lms-context-provider.git",
+  "publishConfig": {
+    "registry": "https://d2l-569998014834.d.codeartifact.us-east-1.amazonaws.com/npm/private/"
+  },
   "scripts": {
     "lint": "npm run lint:eslint",
     "lint:eslint": "eslint . --ext .js,.html",
     "test": "npm run test:unit",
-    "test:unit": "d2l-test-runner --files ./src/**/test/*.test.js"
+    "test:unit": "d2l-test-runner --files ./test/**/*.test.js"
   },
   "author": "D2L Corporation",
   "license": "Apache-2.0",
@@ -18,9 +21,11 @@
     "eslint-config-brightspace": "^1",
     "sinon": "^17"
   },
+  "exports": {
+    "./host.js": "./src/host/host.js",
+    "./client.js": "./src/client/client.js"
+  },
   "files": [
-    "/src",
-    "!demo",
-    "!test"
+    "/src"
   ]
 }
