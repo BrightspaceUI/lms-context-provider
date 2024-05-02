@@ -66,7 +66,7 @@ function sendChangeEvent(type, changedValues) {
 	});
 }
 
-export function initialize() {
+export function initializeImpl() {
 	if (initialized) return;
 
 	window.addEventListener('message', handleContextRequestMessage);
@@ -75,7 +75,7 @@ export function initialize() {
 	initialized = true;
 }
 
-export function allowFrame(frame, origin) {
+function allowFrameImpl(frame, origin) {
 	if (!initialized) {
 		throw new LmsContextProviderError(`Can't register frame with id ${frame.id}. Context provider host has not been initialized.`);
 	}
@@ -87,7 +87,7 @@ export function allowFrame(frame, origin) {
 	allowedFrames.set(frame, origin);
 }
 
-export function registerPlugin(type, tryGetCallback, subscriptionCallback) {
+function registerPluginImpl(type, tryGetCallback, subscriptionCallback) {
 	if (!initialized) {
 		throw new LmsContextProviderError(`Can't register plugin with type ${type}. Context provider host has not been initialized.`);
 	}
@@ -107,7 +107,7 @@ export function registerPlugin(type, tryGetCallback, subscriptionCallback) {
 	}
 }
 
-export function reset() {
+function resetImpl() {
 	if (!initialized) return;
 
 	window.removeEventListener('message', handleContextRequestMessage);
@@ -119,3 +119,15 @@ export function reset() {
 
 	initialized = false;
 }
+
+export const contextHostMockWrapper = {
+	allowFrame: allowFrameImpl,
+	initialize: initializeImpl,
+	registerPlugin: registerPluginImpl,
+	reset: resetImpl
+};
+
+export const allowFrame = (frame, origin) => contextHostMockWrapper.allowFrame(frame, origin);
+export const initialize = () => contextHostMockWrapper.initialize();
+export const registerPlugin = (type, tryGetCallback, subscriptionCallback) => contextHostMockWrapper.registerPlugin(type, tryGetCallback, subscriptionCallback);
+export const reset = () => contextHostMockWrapper.reset();

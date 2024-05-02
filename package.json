@@ -23,7 +23,8 @@
   },
   "exports": {
     "./host.js": "./src/host/host.js",
-    "./client.js": "./src/client/client.js"
+    "./client.js": "./src/client/client.js",
+    "./test-helpers/test-host.js": "./src/test-helpers/test-host.js"
   },
   "files": [
     "/src"
