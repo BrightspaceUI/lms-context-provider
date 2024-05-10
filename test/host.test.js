@@ -187,7 +187,10 @@ describe('lms-context-provider host', () => {
 			const subscriptionMessageSpy = spy();
 			await sendFramedClientRequest(mockFrame, true, mockContextType, subscriptionMessageSpy);
 			expect(subscriptionSpy).to.have.been.calledOnce;
-			expect(subscriptionSpy.args[0]).to.have.length(1);
+			expect(subscriptionSpy.args[0]).to.have.length(2);
+
+			// Assert options argument
+			expect(subscriptionSpy.args[0][1]).to.deep.equal({});
 
 			// Trigger subscription callback in order to mimic a context change event
 			subscriptionSpy.args[0][0](testValues);
@@ -334,7 +337,10 @@ describe('lms-context-provider host', () => {
 			const subscriptionEventSpy = spy();
 			sendNonFramedClientRequest(mockContextType, subscriptionEventSpy);
 			expect(subscriptionSpy).to.have.been.calledOnce;
-			expect(subscriptionSpy.args[0]).to.have.length(1);
+			expect(subscriptionSpy.args[0]).to.have.length(2);
+
+			// Assert options argument
+			expect(subscriptionSpy.args[0][1]).to.deep.equal({});
 
 			// Trigger subscription callback in order to mimic a context change event
 			subscriptionSpy.args[0][0](testValues);
