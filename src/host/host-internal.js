@@ -11,7 +11,7 @@ function handleContextRequest(type, options, subscribe) {
 
 	if (subscribe && !subscriptionQueue.has(type)) {
 		subscriptionQueue.add(type);
-		if (plugin && plugin.subscribe) plugin.subscribe(changedValues => sendChangeEvent(type, changedValues));
+		if (plugin && plugin.subscribe) plugin.subscribe(changedValues => sendChangeEvent(type, changedValues), {});
 	}
 
 	return plugin && plugin.tryGet && plugin.tryGet(options);
