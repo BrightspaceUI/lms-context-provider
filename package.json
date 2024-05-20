@@ -19,7 +19,7 @@
     "@brightspace-ui/testing": "^1",
     "eslint": "^8",
     "eslint-config-brightspace": "^1",
-    "sinon": "^17"
+    "sinon": "^18"
   },
   "exports": {
     "./host.js": "./src/host/host.js",
