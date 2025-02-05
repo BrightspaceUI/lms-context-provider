@@ -23,3 +23,6 @@ jobs:
           AUTO_MERGE_TOKEN: ${{ secrets.LMS_CONTEXT_PROVIDER_GITHUB_TOKEN }}
           APPROVAL_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.LMS_CONTEXT_PROVIDER_GITHUB_TOKEN }}
+          SLACK_CHANNEL_FAILURE: '#shield-web-component-alerts'
+          SLACK_CHANNEL_STALE_PR: '#shield-web-component-alerts'
+          SLACK_TOKEN: ${{ secrets.D2L_SLACK_TOKEN }}
