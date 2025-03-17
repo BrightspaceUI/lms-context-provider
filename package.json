@@ -2,7 +2,7 @@
   "name": "@brightspace-ui/lms-context-provider",
   "description": "Provides LMS context and environment settings to UI components, applications and libraries",
   "type": "module",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "repository": "https://github.com/BrightspaceUI/lms-context-provider.git",
   "publishConfig": {
     "access": "public"
