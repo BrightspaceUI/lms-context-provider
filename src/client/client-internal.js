@@ -1,6 +1,6 @@
 import { LmsContextProviderError } from '../error.js';
 
-const messageTimeoutMs = 75;
+const messageTimeoutMs = 150;
 let oneTimeMessageListenerInitialized = false;
 let subscriptionListenerInitialized = false;
 let framed;
