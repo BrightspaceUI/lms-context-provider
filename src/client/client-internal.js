@@ -3,7 +3,7 @@ import { LmsContextProviderError } from '../error.js';
 const messageTimeoutMs = 75;
 let oneTimeMessageListenerInitialized = false;
 let subscriptionListenerInitialized = false;
-let framed;
+let framedPromise;
 
 const oneTimeCallbacks = new Map();
 const subscriptionCallbacks = new Map();
@@ -91,25 +91,25 @@ async function sendEvent(type, options, subscribe) {
 	}
 }
 
-export async function isFramed() {
-	if (framed !== undefined) return framed;
+export function isFramed() {
+	if (framedPromise !== undefined) return framedPromise;
 
 	try {
 		if (window === window.parent) {
-			framed = false;
-			return framed;
+			framedPromise = Promise.resolve(false);
+			return framedPromise;
 		}
 	} catch {
-		framed = false;
-		return framed;
+		framedPromise = Promise.resolve(false);
+		return framedPromise;
 	}
 
-	framed = await Promise.race([
+	framedPromise = Promise.race([
 		sendMessage({ isContextProvider: true, type: 'framed-request' }),
 		new Promise(resolve => setTimeout(() => resolve(false), messageTimeoutMs))
 	]);
 
-	return framed;
+	return framedPromise;
 }
 
 export async function tryGet(contextType, options, onChangeCallback) {
@@ -139,7 +139,7 @@ export function reset() {
 
 	oneTimeMessageListenerInitialized = false;
 	subscriptionListenerInitialized = false;
-	framed = undefined;
+	framedPromise = undefined;
 
 	oneTimeCallbacks.clear();
 	subscriptionCallbacks.clear();
