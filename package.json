@@ -17,7 +17,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@brightspace-ui/testing": "^1",
-    "@eslint/compat": "^1",
+    "@eslint/compat": "^2",
     "eslint": "^9",
     "eslint-config-brightspace": "^2",
     "sinon": "^21"
