@@ -18,7 +18,7 @@
   "devDependencies": {
     "@brightspace-ui/testing": "^1",
     "@eslint/compat": "^2",
-    "eslint": "^9",
+    "eslint": "^10",
     "eslint-config-brightspace": "^2",
     "sinon": "^21"
   },
