@@ -175,7 +175,7 @@ describe('lms-context-provider client', () => {
 				setUpMockHostMessageListener(mockFrame, requestSpy, false);
 
 				const val = tryGet(mockContextType, mockOpts);
-				return val.then(val => {
+				val.then(val => {
 					expect.fail(`Should reject, but ${val} was returned`);
 				}, err => {
 					expect(err).to.be.an.instanceof(LmsContextProviderError);
@@ -194,7 +194,7 @@ describe('lms-context-provider client', () => {
 				setUpMockHostMessageListener(mockFrame, requestSpy, true, testVal, false);
 
 				const val = tryGet(mockContextType, mockOpts);
-				return val.then(val => {
+				val.then(val => {
 					expect.fail(`Should reject, but ${val} was returned`);
 				}, err => {
 					expect(err).to.be.an.instanceof(LmsContextProviderError);
@@ -213,7 +213,7 @@ describe('lms-context-provider client', () => {
 				setUpMockHostMessageListener(mockFrame, requestSpy, true, testVal, true, true);
 
 				const val = tryGet(mockContextType, mockOpts);
-				return val.then(val => {
+				val.then(val => {
 					expect.fail(`Should reject, but ${val} was returned`);
 				}, err => {
 					expect(err).to.be.an.instanceof(LmsContextProviderError);
@@ -339,7 +339,7 @@ describe('lms-context-provider client', () => {
 				const requestSpy = spy();
 				setUpMockHostMessageListener(mockFrame, requestSpy, false);
 
-				return tryPerform(mockContextType, mockOpts).then(() => {
+				tryPerform(mockContextType, mockOpts).then(() => {
 					expect.fail('Should reject, but did not');
 				}, err => {
 					expect(err).to.be.an.instanceof(LmsContextProviderError);
@@ -356,7 +356,7 @@ describe('lms-context-provider client', () => {
 				const requestSpy = spy();
 				setUpMockHostMessageListener(mockFrame, requestSpy, true, undefined, false);
 
-				return tryPerform(mockContextType, mockOpts).then(() => {
+				tryPerform(mockContextType, mockOpts).then(() => {
 					expect.fail('Should reject, but did not');
 				}, err => {
 					expect(err).to.be.an.instanceof(LmsContextProviderError);
@@ -373,7 +373,7 @@ describe('lms-context-provider client', () => {
 				const requestSpy = spy();
 				setUpMockHostMessageListener(mockFrame, requestSpy, true, undefined, true, true);
 
-				return tryPerform(mockContextType, mockOpts).then(() => {
+				tryPerform(mockContextType, mockOpts).then(() => {
 					expect.fail('Should reject, but did not');
 				}, err => {
 					expect(err).to.be.an.instanceof(LmsContextProviderError);
@@ -538,7 +538,7 @@ describe('lms-context-provider client', () => {
 				const requestSpy = spy();
 				setUpMockHostEventListener(requestSpy, false);
 
-				return tryPerform(mockContextType, mockOpts).then(() => {
+				tryPerform(mockContextType, mockOpts).then(() => {
 					expect.fail('Should reject, but did not');
 				}, err => {
 					expect(err).to.be.an.instanceof(LmsContextProviderError);
