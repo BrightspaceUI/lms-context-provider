@@ -20,7 +20,7 @@
     "@eslint/compat": "^2",
     "eslint": "^9",
     "eslint-config-brightspace": "^3",
-    "sinon": "^21"
+    "sinon": "^22"
   },
   "exports": {
     "./host.js": "./src/host/host.js",
