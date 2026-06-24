@@ -1,0 +1,10 @@
+{
+  "tool": "LMSContextProvider",
+  "experience": "BrightspaceUI",
+  "overrides": [
+    {
+      "pattern": "test/*.test.js",
+      "type": "UI Unit"
+    }
+  ]
+}
